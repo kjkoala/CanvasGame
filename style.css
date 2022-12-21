@@ -1,0 +1,17 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    display: flex;
+    height: 100%;
+}
+
+body {
+    margin: auto;
+}
+
+canvas {
+    background-color: wheat;
+}
