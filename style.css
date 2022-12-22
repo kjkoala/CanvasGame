@@ -6,12 +6,9 @@
 html {
     display: flex;
     height: 100%;
+    background-color: black;
 }
 
 body {
     margin: auto;
-}
-
-canvas {
-    background-color: wheat;
 }
