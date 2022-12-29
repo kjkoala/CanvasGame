@@ -1,7 +1,7 @@
 import * as Keys from "./constants.js";
-import { Dust, Fire } from "./particles.js";
+import { Dust, Fire, Splash } from "./particles.js";
 
-const states = {
+export const states = {
     SITTING: 0,
     RUNNING: 1,
     JUMPING: 2,
@@ -23,15 +23,17 @@ export class Sitting extends State {
         super('SITTING', game);
     }
     enter() {
-        this.game.player.frameX = 0;
-        this.game.player.frameY = 5;
-        this.game.player.maxFrame = 4;
+        const { player } = this.game;
+        player.frameX = 0;
+        player.frameY = 5;
+        player.maxFrame = 4;
     }
     handleInput(input) {
+        const { player } = this.game;
         if (input.has(Keys.ArrowLeft) || input.has(Keys.ArrowRight)) {
-            this.game.player.setState(states.RUNNING, 1);
+            player.setState(states.RUNNING, 1);
         } else if (input.has(Keys.Enter)) {
-            this.game.player.setState(states.ROLLING, 2);
+            player.setState(states.ROLLING, 2);
         }
     }
 }
@@ -41,18 +43,20 @@ export class Running extends State {
         super('RUNNING', game);
     }
     enter() {
-        this.game.player.frameX = 0;
-        this.game.player.frameY = 3;
-        this.game.player.maxFrame = 7;
+        const { player } = this.game;
+        player.frameX = 0;
+        player.frameY = 3;
+        player.maxFrame = 7;
     }
     handleInput(input) {
-        this.game.particles.add(new Dust(this.game, this.game.player.x, this.game.player.y));
-        if (input.has(Keys.ArrowDown)) {
-            this.game.player.setState(states.SITTING, 0);
+        const { particles, player } = this.game;
+        particles.add(new Dust(this.game, player.x, player.y));
+        if (input.has(Keys.ArrowDown) && !(input.has(Keys.ArrowLeft) || input.has(Keys.ArrowRight))) {
+            player.setState(states.SITTING, 0);
         } else if (input.has(Keys.ArrowUp)) {
-            this.game.player.setState(states.JUMPING, 1);
+            player.setState(states.JUMPING, 1);
         } else if (input.has(Keys.Enter)) {
-            this.game.player.setState(states.ROLLING, 2);
+            player.setState(states.ROLLING, 2);
         }
     }
 }
@@ -62,16 +66,20 @@ export class Jumping extends State {
         super('JUMPING', game);
     }
     enter() {
-        if (this.game.player.onGround()) this.game.player.vy -= 20;
-        this.game.player.frameX = 0;
-        this.game.player.frameY = 1;
-        this.game.player.maxFrame = 6;
+        const { player } = this.game;
+        if (player.onGround()) player.vy -= 20;
+        player.frameX = 0;
+        player.frameY = 1;
+        player.maxFrame = 6;
     }
     handleInput(input) {
-        if (this.game.player.vy > this.game.player.weight) {
-            this.game.player.setState(states.FALLING, 1);
+        const { player } = this.game;
+        if (player.vy > player.weight) {
+            player.setState(states.FALLING, 1);
         } else if (input.has(Keys.Enter)) {
-            this.game.player.setState(states.ROLLING, 2);
+            player.setState(states.ROLLING, 2);
+        } else if (input.has(Keys.ArrowDown)) {
+            player.setState(states.DIVING, 0);
         }
     }
 }
@@ -81,13 +89,17 @@ export class Falling extends State {
         super('FALLING', game);
     }
     enter() {
-        this.game.player.frameX = 0;
-        this.game.player.frameY = 2;
-        this.game.player.maxFrame = 6;
+        const { player } = this.game;
+        player.frameX = 0;
+        player.frameY = 2;
+        player.maxFrame = 6;
     }
     handleInput(input) {
-        if (this.game.player.onGround()) {
-            this.game.player.setState(states.RUNNING, 1);
+        const { player } = this.game;
+        if (player.onGround()) {
+            player.setState(states.RUNNING, 1);
+        } else if (input.has(Keys.ArrowDown)) {
+            player.setState(states.DIVING, 0);
         }
     }
 }
@@ -97,19 +109,65 @@ export class Rolling extends State {
         super('ROLLING', game);
     }
     enter() {
-        this.game.player.frameX = 0;
-        this.game.player.frameY = 6;
-        this.game.player.maxFrame = 3;
+        const { player } = this.game
+        player.frameX = 0;
+        player.frameY = 6;
+        player.maxFrame = 3;
     }
     handleInput(input) {
-        this.game.particles.add(new Fire(this.game, this.game.player.x, this.game.player.y))
-        if (!input.has(Keys.Enter) && this.game.player.onGround()) {
-            this.game.player.setState(states.RUNNING, 1);
+        const { particles, player } = this.game;
+        particles.add(new Fire(this.game, player.x, player.y))
+        if (!input.has(Keys.Enter) && player.onGround()) {
+            player.setState(states.RUNNING, 1);
+        } else if (!input.has(Keys.Enter) && !player.onGround()) {
+            player.setState(states.FALLING, 1);
+        } else if (input.has(Keys.Enter) && input.has(Keys.ArrowUp) && player.onGround()) {
+            player.vy -= 26;
+        } else if (input.has(Keys.ArrowDown) && !player.onGround()) {
+            player.setState(states.DIVING, 0);
         }
-        else if (!input.has(Keys.Enter) && !this.game.player.onGround()) {
-            this.game.player.setState(states.FALLING, 1);
-        } else if (input.has(Keys.Enter) && input.has(Keys.ArrowUp) && this.game.player.onGround()) {
-            this.game.player.vy -= 26;
+    }
+}
+
+export class Diving extends State {
+    constructor(game) {
+        super('DIVING', game);
+    }
+    enter() {
+        const { player } = this.game
+        player.frameX = 0;
+        player.frameY = 6;
+        player.maxFrame = 3;
+        player.vy = 15;
+    }
+    handleInput() {
+        const { player, particles } = this.game;
+        particles.add(new Fire(this.game, player.x, player.y))
+        if (player.onGround()) {
+            player.setState(states.ROLLING, 2);
+            for(let i = 0; i < 30; i++) {
+                particles.add(new Splash(this.game, player.x + player.width * 0.5, player.y + player.height * 0.5 ))
+            }
+        }
+    }
+}
+
+export class Hit extends State {
+    constructor(game) {
+        super('HIT', game);
+    }
+    enter() {
+        const { player } = this.game
+        player.frameX = 0;
+        player.frameY = 4;
+        player.maxFrame = 10;
+    }
+    handleInput() {
+        const { player } = this.game;
+        if (player.frameX >= player.maxFrame && player.onGround()) {
+            player.setState(states.RUNNING, 1);
+        } else if (player.frameX >= player.maxFrame && !player.onGround()) {
+            player.setState(states.FALLING, 1);
         }
     }
 }

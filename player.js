@@ -1,5 +1,6 @@
+import { CollisionAnimation } from "./collisionAnimation.js";
 import * as Arrows from "./constants.js";
-import { Falling, Jumping, Rolling, Running, Sitting } from "./playerState.js";
+import { Diving, Falling, Hit, Jumping, Rolling, Running, Sitting, states as PlayerStates } from "./playerState.js";
 
 export class Player {
     constructor(game) {
@@ -19,20 +20,19 @@ export class Player {
         this.frameInterval = 1000 / this.fps;
         this.frameTimer = 0;
         this.image = document.querySelector('#player');
-        this.states = [new Sitting(game), new Running(game), new Jumping(game), new Falling(game), new Rolling(game)];
+        this.states = [new Sitting(game), new Running(game), new Jumping(game), new Falling(game), new Rolling(game), new Diving(game), new Hit(game)];
     }
 
     update(input, deltaTime) {
         this.checkCollision();
         this.currentState.handleInput(input)
         this.x += this.speed;
-        if (input.has(Arrows.ArrowRight)) this.speed = this.maxSpeed;
-        else if (input.has(Arrows.ArrowLeft)) this.speed = -this.maxSpeed;
+        if (input.has(Arrows.ArrowRight) && this.states[PlayerStates.HIT] !== this.currentState) this.speed = this.maxSpeed;
+        else if (input.has(Arrows.ArrowLeft) && this.states[PlayerStates.HIT] !== this.currentState) this.speed = -this.maxSpeed;
         else this.speed = 0;
 
         if (this.x < 0) this.x = 0;
         if (this.x > this.game.width - this.width) this.x = this.game.width - this.width;
-
         // vertical movement
         this.y += this.vy;
         if (!this.onGround()) this.vy += this.weight;
@@ -61,6 +61,11 @@ export class Player {
     }
 
     checkCollision() {
+        const onGround = this.game.height - this.height - this.game.groundMargin
+        if (this.y > onGround) {
+            this.y = onGround;
+        }
+    
         this.game.enemies.forEach(enemy => {
             if (
                 enemy.x < this.x + this.width &&
@@ -69,7 +74,12 @@ export class Player {
                 enemy.y + enemy.height > this.y
             ) {
                 enemy.markForDeletion = true;
-                this.game.score++;
+                this.game.collisions.add(new CollisionAnimation(this.game, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5 ))
+                if (this.currentState === this.states[PlayerStates.ROLLING] || this.currentState === this.states[PlayerStates.DIVING]) {
+                    this.game.score++;
+                } else {
+                    this.setState(PlayerStates.HIT, 0);
+                }
             }
         })
     }
