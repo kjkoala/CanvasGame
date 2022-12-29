@@ -1,5 +1,5 @@
 import * as Arrows from "./constants.js";
-import { Falling, Jumping, Running, Sitting } from "./playerState.js";
+import { Falling, Jumping, Rolling, Running, Sitting } from "./playerState.js";
 
 export class Player {
     constructor(game) {
@@ -19,12 +19,11 @@ export class Player {
         this.frameInterval = 1000 / this.fps;
         this.frameTimer = 0;
         this.image = document.querySelector('#player');
-        this.states = [new Sitting(this), new Running(this), new Jumping(this), new Falling(this)];
-        this.currentState = this.states[0];
-        this.currentState.enter();
+        this.states = [new Sitting(game), new Running(game), new Jumping(game), new Falling(game), new Rolling(game)];
     }
 
     update(input, deltaTime) {
+        this.checkCollision();
         this.currentState.handleInput(input)
         this.x += this.speed;
         if (input.has(Arrows.ArrowRight)) this.speed = this.maxSpeed;
@@ -59,5 +58,19 @@ export class Player {
         this.currentState = this.states[state];
         this.game.speed = this.game.maxSpeed * speed;
         this.currentState.enter();
+    }
+
+    checkCollision() {
+        this.game.enemies.forEach(enemy => {
+            if (
+                enemy.x < this.x + this.width &&
+                enemy.x + enemy.width > this.x &&
+                enemy.y < this.y + this.height &&
+                enemy.y + enemy.height > this.y
+            ) {
+                enemy.markForDeletion = true;
+                this.game.score++;
+            }
+        })
     }
 }

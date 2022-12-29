@@ -2,6 +2,7 @@ import { Player } from './player.js';
 import { InputHandler } from './input.js';
 import { Background } from './background.js';
 import { FlyingEnemy, ClimbingEnemy, GroundEnemy } from './enemies.js';
+import { UI } from './UI.js';
 
 class Game {
     constructor(width, height) {
@@ -14,9 +15,17 @@ class Game {
         this.background = new Background(this);
         this.player = new Player(this);
         this.input = new InputHandler();
+        this.UI = new UI(this);
         this.enemies = new Set();
+        this.particles = new Set();
         this.enemyTimer = 0;
         this.enemyInterval = 1000;
+
+        this.fontColor = 'black';
+        this.score = 0;
+
+        this.player.currentState = this.player.states[0];
+        this.player.currentState.enter();
     }
 
     update(deltaTime){
@@ -30,9 +39,12 @@ class Game {
         }
         this.enemies.forEach(enemy => {
             enemy.update(deltaTime)
-            if (enemy.markForDeletion) { 
-                this.enemies.delete(enemy);
-            }
+            if (enemy.markForDeletion) this.enemies.delete(enemy);
+        })
+
+        this.particles.forEach(particle => {
+            particle.update()
+            if (particle.markForDeletion) this.particles.delete(particle);
         })
     }
 
@@ -40,6 +52,8 @@ class Game {
         this.background.draw(context);
         this.player.draw(context);
         this.enemies.forEach(enemy => enemy.draw(context))
+        this.particles.forEach(particle => particle.draw(context))
+        this.UI.draw(context);
     }
 
     addEnemy() {
